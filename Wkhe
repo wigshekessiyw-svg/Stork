@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapbox Pressure Delta & Globe Spin</title>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js"></script>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css" rel="stylesheet" />
+    <style>
+        body { margin: 0; padding: 0; background: #0f172a; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+        
+        #output-box {
+            position: absolute;
+            bottom: 30px;
+            left: 20px;
+            background: rgba(15, 23, 42, 0.9);
+            color: #38bdf8;
+            padding: 15px 20px;
+            border-radius: 10px;
+            font-family: monospace;
+            font-size: 14px;
+            border: 1px solid #0284c7;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+<div id="output-box">
+    <strong>[Console Print Log]</strong><br>
+    <span id="log-text">กำลังโหลดข้อมูล...</span>
+</div>
+
+<script>
+    mapboxgl.accessToken = 'YOUR_MAPBOX_ACCESS_TOKEN';
+
+    const map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/dark-v11',
+        projection: 'globe',
+        center: [100.5, 13.75],
+        zoom: 1.8
+    });
+
+    // 1. จุดพิกัดสำหรับวัดค่าความต่างความดัน (Pressure Delta)
+    const pointA = { name: 'Point A (Bangkok)', lat: 13.75, lng: 100.5, pressure: 1008 }; // hPa
+    const pointB = { name: 'Point B (Tokyo)', lat: 35.67, lng: 139.65, pressure: 1022 };   // hPa
+
+    // 2. ฟังก์ชันคำนวณและ Print ค่า Delta ความดัน
+    function calculateAndPrintPressureDelta(p1, p2) {
+        // สูตรคำนวณ Delta: ΔP = |P1 - P2|
+        const deltaP = Math.abs(p1.pressure - p2.pressure);
+        
+        const logMessage = `Delta P = |${p1.pressure} - ${p2.pressure}| = ${deltaP} hPa`;
+        
+        // Print ออกไปที่ Developer Console
+        console.log("=== PRESSURE DELTA CALCULATION ===");
+        console.log(`Location A (${p1.name}): ${p1.pressure} hPa`);
+        console.log(`Location B (${p2.name}): ${p2.pressure} hPa`);
+        console.log(`Result: ความต่างความกดอากาศ (${logMessage})`);
+        
+        // แสดงผลบนหน้าจอ UI
+        document.getElementById('log-text').innerHTML = 
+            `<b>A:</b> ${p1.pressure} hPa | <b>B:</b> ${p2.pressure} hPa<br>` +
+            `<span style="color:#4ade80"><b>ความต่างความดัน (Delta):</b> ${deltaP} hPa</span>`;
+            
+        return deltaP;
+    }
+
+    map.on('style.load', () => {
+        map.setFog({
+            'color': 'rgb(15, 23, 42)',
+            'high-color': 'rgb(56, 189, 248)',
+            'space-color': 'rgb(11, 11, 25)'
+        });
+
+        // สั่งทำงานและ Print ค่า Delta ความดัน
+        calculateAndPrintPressureDelta(pointA, pointB);
+    });
+
+    // 3. สคริปต์หมุนลูกโลก (Globe Spin Loop)
+    const secondsPerRotate = 120;
+    let userInteracting = false;
+
+    function spinGlobe() {
+        if (!userInteracting && map.getZoom() < 5) {
+            const distancePerSecond = 360 / secondsPerRotate;
+            const center = map.getCenter();
+            center.lng -= distancePerSecond / 60;
+            map.easeTo({ center, duration: 0, easing: (n) => n });
+        }
+    }
+
+    map.on('mousedown', () => { userInteracting = true; });
+    map.on('mouseup', () => { userInteracting = false; spinGlobe(); });
+    map.on('dragend', () => { userInteracting = false; spinGlobe(); });
+    map.on('moveend', () => { spinGlobe(); });
+
+    spinGlobe();
+</script>
+
+</body>
+</html>
